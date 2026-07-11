@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <title>Paintball Panic</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+        background: #071426;
+        color: #fff;
+        font-family:
+          system-ui,
+          Segoe UI,
+          sans-serif;
+      }
+      #app,
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      .screen {
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        padding: calc(18px + env(safe-area-inset-top))
+          calc(18px + env(safe-area-inset-right))
+          calc(18px + env(safe-area-inset-bottom))
+          calc(18px + env(safe-area-inset-left));
+        background: linear-gradient(135deg, #071426dd, #153b68cc);
+        backdrop-filter: blur(6px);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .title {
+        font-weight: 1000;
+        font-size: clamp(42px, 10vw, 104px);
+        line-height: 0.86;
+        text-align: center;
+        color: #fff;
+        text-shadow:
+          0 8px #09284b,
+          0 0 28px #38ecff;
+      }
+      .panel {
+        max-width: 1100px;
+        max-height: 80vh;
+        overflow: auto;
+        background: #071b35d9;
+        border: 2px solid #75efff66;
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: 0 20px 60px #0009;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+        width: min(1050px, 94vw);
+      }
+      .card {
+        border: 1px solid #ffffff33;
+        border-radius: 18px;
+        padding: 14px;
+        background: linear-gradient(145deg, #ffffff20, #ffffff08);
+      }
+      .btn {
+        min-width: 145px;
+        min-height: 48px;
+        border: 0;
+        border-radius: 16px;
+        padding: 12px 18px;
+        font-weight: 900;
+        color: #06233b;
+        background: linear-gradient(#fff, #88f3ff);
+        box-shadow: 0 6px #14627a;
+        cursor: pointer;
+      }
+      .btn.pink {
+        background: linear-gradient(#ffe4f7, #ff4ab2);
+        box-shadow: 0 6px #8b1957;
+      }
+      .btn.gold {
+        background: linear-gradient(#fff4a8, #ffc531);
+        box-shadow: 0 6px #8a6511;
+      }
+      .hud {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+      }
+      .top {
+        position: absolute;
+        top: env(safe-area-inset-top);
+        left: 0;
+        right: 0;
+        display: flex;
+        gap: 7px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        font-weight: 900;
+        text-shadow: 0 2px 3px #001;
+      }
+      .pill {
+        background: #071b35bb;
+        border: 1px solid #fff5;
+        border-radius: 999px;
+        padding: 7px 10px;
+      }
+      .pause {
+        pointer-events: auto;
+        min-width: 54px;
+      }
+      .controls {
+        position: absolute;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        left: calc(8px + env(safe-area-inset-left));
+        right: calc(8px + env(safe-area-inset-right));
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        pointer-events: none;
+      }
+      .grp {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      }
+      .touch {
+        pointer-events: auto;
+        min-width: 62px;
+        min-height: 62px;
+        border-radius: 999px;
+        border: 2px solid #fff7;
+        background: #153b68cc;
+        color: #fff;
+        font-weight: 1000;
+      }
+      .fire {
+        min-width: 92px;
+        min-height: 92px;
+        background: radial-gradient(circle, #fff8, #ff3f93 60%, #86134a);
+      }
+      .cover {
+        min-width: 88px;
+        min-height: 88px;
+        background: radial-gradient(circle, #fff8, #24d6e8 60%, #096070);
+      }
+      .ability {
+        background: conic-gradient(#ffd84d var(--q, 0%), #263653 0);
+      }
+      .toast {
+        position: fixed;
+        top: 72px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 8;
+        background: #08213fee;
+        border: 2px solid #75efff;
+        border-radius: 15px;
+        padding: 10px 18px;
+        font-weight: 900;
+        opacity: 0;
+        transition: 0.25s;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+      @media (max-width: 700px) {
+        .pill {
+          font-size: 12px;
+          padding: 5px;
+        }
+        .btn {
+          min-width: 125px;
+        }
+        .touch {
+          min-width: 54px;
+          min-height: 54px;
+        }
+        .fire {
+          min-width: 82px;
+          min-height: 82px;
+        }
+        .cover {
+          min-width: 76px;
+          min-height: 76px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud" class="hud hidden">
+        <div class="top">
+          <span class="pill" id="score">Score 0</span
+          ><span class="pill" id="obj">Objective</span
+          ><span class="pill" id="ammo">16/16</span
+          ><span class="pill" id="visor">Visor 0%</span
+          ><span class="pill" id="combo">Clean Shot x1</span
+          ><button class="btn pause" id="pause">Ⅱ</button>
+        </div>
+        <div class="controls">
+          <div class="grp">
+            <button class="touch cover" id="cover">COVER</button
+            ><button class="touch" id="left">◀</button
+            ><button class="touch" id="right">▶</button>
+          </div>
+          <div class="grp">
+            <button class="touch" id="reload">RELOAD</button
+            ><button class="touch ability" id="ability">E</button
+            ><button class="touch fire" id="fire">FIRE</button>
+          </div>
+        </div>
+      </div>
+      <div id="toast" class="toast"></div>
+      <div id="screen" class="screen"></div>
+    </div>
+    <script>
+      (() => {
+        "use strict";
+        const $ = (id) => document.getElementById(id),
+          TAU = Math.PI * 2,
+          clamp = (v, a, b) => Math.max(a, Math.min(b, v)),
+          rnd = (a, b) => a + Math.random() * (b - a);
+        class SeededRandom {
+          constructor(s) {
+            this.s = s >>> 0 || 1;
+          }
+          next() {
+            this.s = (1664525 * this.s + 1013904223) >>> 0;
+            return this.s / 4294967296;
+          }
+          pick(a) {
+            return a[Math.floor(this.next() * a.length)];
+          }
+        }
+        const DATA = {
+          diff: {
+            Rookie: {
+              warn: 2.2,
+              enemy: 0.7,
+              splash: 0.7,
+              clean: 1.7,
+              assist: 48,
+              score: 0.8,
+              time: 1.25,
+              ammo: 4,
+            },
+            Pro: {
+              warn: 1.5,
+              enemy: 1,
+              splash: 1,
+              clean: 1,
+              assist: 25,
+              score: 1,
+              time: 1,
+              ammo: 0,
+            },
+            Elite: {
+              warn: 1.1,
+              enemy: 1.3,
+              splash: 1.25,
+              clean: 0.8,
+              assist: 13,
+              score: 1.35,
+              time: 0.9,
+              ammo: -2,
+            },
+            Panic: {
+              warn: 0.85,
+              enemy: 1.6,
+              splash: 1.5,
+              clean: 0.62,
+              assist: 5,
+              score: 1.8,
+              time: 0.82,
+              ammo: -4,
+            },
+          },
+          markers: [
+            ["Scout", "Accurate, fast reload, small hopper", 14, 0.42, 850, 1],
+            ["Sprayer", "Fast firing with wider spread", 22, 0.2, 700, 1.55],
+            ["Longshot", "Precise, quick paintballs", 12, 0.65, 1100, 0.85],
+            ["Ricochet", "Bounces once from shiny targets", 16, 0.45, 760, 1],
+            ["Splash Cannon", "Slow large splash rounds", 8, 0.8, 540, 0.7],
+          ],
+          tools: [
+            "Microfiber Glove",
+            "Rain Repellent",
+            "Auto Wiper",
+            "Emergency Rinse",
+            "Impact Film",
+            "ClearSight Coating",
+          ],
+          abilities: [
+            "Focus Time",
+            "Paint Wave",
+            "Rapid Reload",
+            "Bubble Shield",
+            "Spotter Drone",
+            "Clean Sweep",
+          ],
+          passives: [
+            "Larger hopper",
+            "Faster reload",
+            "Faster paintballs",
+            "Improved accuracy",
+            "Faster cover movement",
+            "Longer combo protection",
+            "Reduced visor splatter",
+            "Faster ability charging",
+            "Bonus trick-shot points",
+            "Additional mission time",
+            "Stronger aim assistance",
+            "Faster visor cleaning",
+          ],
+          survival: [
+            "Double Tap",
+            "Ricochet Round",
+            "Paint Burst",
+            "Emergency Wiper",
+            "Combo Shield",
+            "Faster Cover Slide",
+            "Drone Assistant",
+            "Larger Hopper",
+            "Instant Reload Chance",
+            "Slow-Motion Tag",
+            "Grenade Pop Bonus",
+            "Visor Resistance",
+            "Paintball Magnetism",
+            "Triple-Shot Charge",
+            "Score Surge",
+            "Shield Breaker",
+            "Water Splash",
+            "Last-Chance Bubble",
+          ],
+          enemies: [
+            "Rookie",
+            "Sprinter",
+            "Sniper",
+            "Paint Bomber",
+            "Shield Player",
+            "Medic",
+            "Trickster",
+            "Rusher",
+          ],
+          arenas: ["Backyard Blitz", "Neon Factory", "Pirate Paint Cove"],
+          types: [
+            "Elimination",
+            "Survival",
+            "Target Rush",
+            "Capture Points",
+            "Accuracy Trial",
+            "Protect the Rookie",
+            "Rescue Run",
+            "Trick-Shot Challenge",
+            "Clean Sweep",
+            "Boss Battle",
+          ],
+          ach: [
+            "First Tag",
+            "Clean Shot",
+            "Perfect Accuracy",
+            "Visor Survivor",
+            "Wipeout",
+            "Hot Streak",
+            "Color Storm",
+            "Splatter Master",
+            "Grenade Popper",
+            "Trick-Shot Artist",
+            "Backyard Champion",
+            "Factory Shutdown",
+            "Captain Defeated",
+            "Campaign Champion",
+            "Daily Operator",
+            "Survival Specialist",
+          ],
+        };
+        DATA.missions = Array.from({ length: 15 }, (_, i) => {
+          let a = Math.floor(i / 5),
+            boss = i % 5 === 4;
+          return {
+            id: i + 1,
+            arena: a,
+            boss,
+            name: [
+              "First Splash",
+              "Bunker Dash",
+              "Keep It Clean",
+              "Protect the Rookie",
+              "The Backyard Beast",
+              "Factory Floor",
+              "Conveyor Chaos",
+              "Pressure Drop",
+              "Lights Out",
+              "The Foreman",
+              "Dockside Defense",
+              "Swinging Targets",
+              "Cannon Color",
+              "Cove Rescue",
+              "Captain Splatter",
+            ][i],
+            type: boss ? "Boss Battle" : DATA.types[i % 9],
+            brief:
+              "Tag colorful competitors, manage cover, reload wisely, and keep the visor clear.",
+            goal: boss
+              ? "Defeat the multi-phase boss"
+              : "Complete the objective before time expires",
+            time: boss ? 120 : 80 + i * 2,
+          };
+        });
+        class Save {
+          constructor() {
+            this.k = "paintballPanicSave";
+            this.d = {
+              stars: {},
+              high: {},
+              daily: {},
+              ach: {},
+              tutorial: false,
+              panic: false,
+              settings: {
+                music: 0.45,
+                sfx: 0.75,
+                assist: true,
+                simple: false,
+                shake: true,
+                reduced: false,
+                large: false,
+                contrast: false,
+                colorblind: false,
+                traj: true,
+                haptic: false,
+                graphics: "High",
+              },
+              loadout: {
+                marker: "Scout",
+                tool: "Microfiber Glove",
+                ability: "Focus Time",
+                passives: [],
+              },
+              unlocks: {
+                markers: ["Scout"],
+                tools: ["Microfiber Glove"],
+                abilities: ["Focus Time"],
+                passives: [],
+              },
+            };
+            try {
+              Object.assign(
+                this.d,
+                JSON.parse(localStorage.getItem(this.k)) || {},
+              );
+            } catch {}
+          }
+          save() {
+            localStorage.setItem(this.k, JSON.stringify(this.d));
+          }
+          reset() {
+            localStorage.removeItem(this.k);
+            location.reload();
+          }
+        }
+        class Audio {
+          constructor(save) {
+            this.save = save;
+            this.ctx = null;
+            this.music = 0;
+          }
+          init() {
+            if (!this.ctx) {
+              this.ctx = new (AudioContext || webkitAudioContext)();
+              this.menu();
+            }
+            this.ctx.resume();
+          }
+          tone(f, d = 0.12, type = "sine", v = 0.2) {
+            if (!this.ctx) return;
+            let o = this.ctx.createOscillator(),
+              g = this.ctx.createGain();
+            o.type = type;
+            o.frequency.value = f;
+            g.gain.value = v * this.save.d.settings.sfx;
+            o.connect(g);
+            g.connect(this.ctx.destination);
+            o.start();
+            g.gain.exponentialRampToValueAtTime(
+              0.001,
+              this.ctx.currentTime + d,
+            );
+            o.stop(this.ctx.currentTime + d);
+          }
+          sfx(n) {
+            let m = {
+              fire: [220, 0.07, "square"],
+              hit: [540, 0.12, "sawtooth"],
+              splat: [120, 0.18, "triangle"],
+              wipe: [760, 0.05, "sine"],
+              reload: [160, 0.22, "square"],
+              warn: [880, 0.1, "sine"],
+              ok: [660, 0.16, "triangle"],
+              boss: [70, 0.45, "sawtooth"],
+            };
+            this.tone(...(m[n] || m.ok));
+          }
+          menu() {
+            if (!this.ctx) return;
+            clearInterval(this.music);
+            this.music = setInterval(
+              () =>
+                this.tone(
+                  [196, 247, 294, 392][Math.floor(Date.now() / 450) % 4],
+                  0.18,
+                  "triangle",
+                  0.04 * this.save.d.settings.music,
+                ),
+              450,
+            );
+          }
+          stop() {
+            clearInterval(this.music);
+          }
+        }
+        class Visor {
+          constructor(g) {
+            this.g = g;
+            this.splats = [];
+            this.streak = [];
+          }
+          add(x, y, type = "Direct Splash") {
+            let base = type.includes("Small")
+                ? 0.8
+                : type.includes("Grenade")
+                  ? 1.15
+                  : type.includes("Sniper")
+                    ? 1.2
+                    : type.includes("Boss")
+                      ? 2.6
+                      : type.includes("Sticky")
+                        ? 2.5
+                        : type.includes("Foam")
+                          ? 1.8
+                          : 1.45,
+              r = rnd(25, 72) * this.g.diff.splash;
+            this.splats.push({
+              x,
+              y,
+              r,
+              type,
+              life: 1,
+              thick: base,
+              c: ["#ff3faf", "#36e7ff", "#a8ff35", "#ffd54a", "#8b5cff"][
+                Math.floor(rnd(0, 5))
+              ],
+              drip: 0,
+            });
+            if (this.splats.length > 64) this.splats.shift();
+            this.g.audio.sfx("splat");
+          }
+          coverage() {
+            let a = this.g.w * this.g.h,
+              s = this.splats.reduce(
+                (n, p) => n + p.r * p.r * Math.PI * p.life * 0.55,
+                0,
+              );
+            return clamp((s / a) * 100, 0, 100);
+          }
+          clean(x, y, px, py) {
+            let w = 36 * this.g.cleanPower;
+            this.streak.push({ x, y, px, py, life: 0.28 });
+            for (const p of this.splats) {
+              if (
+                Math.hypot(x - p.x, y - p.y) < p.r + w ||
+                Math.hypot(px - p.x, py - p.y) < p.r + w
+              ) {
+                p.thick -= 0.24 * this.g.diff.clean * this.g.cleanPower;
+                p.life *= 0.9;
+                p.x += (x - p.x) * 0.015;
+                p.y += (y - p.y) * 0.015;
+                if (p.thick <= 0 || p.life < 0.18) p.dead = 1;
+                this.g.stats.wipes++;
+              }
+            }
+            this.splats = this.splats.filter((p) => !p.dead);
+            this.g.audio.sfx("wipe");
+          }
+          update(dt) {
+            for (const p of this.splats) {
+              p.drip += dt * p.thick;
+              if (p.drip > 1) p.y += dt * 9 * p.thick;
+            }
+            this.streak = this.streak.filter((s) => (s.life -= dt) > 0);
+          }
+          draw(c) {
+            let w = this.g.w,
+              h = this.g.h;
+            c.save();
+            let gr = c.createRadialGradient(
+              w / 2,
+              h / 2,
+              10,
+              w / 2,
+              h / 2,
+              Math.max(w, h) * 0.7,
+            );
+            gr.addColorStop(0, "#ffffff08");
+            gr.addColorStop(1, "#001b3844");
+            c.fillStyle = gr;
+            c.fillRect(0, 0, w, h);
+            c.strokeStyle = "#d8ffff44";
+            c.lineWidth = 12;
+            c.strokeRect(7, 7, w - 14, h - 14);
+            for (let i = 0; i < 18; i++) {
+              c.strokeStyle = "#fff1";
+              c.beginPath();
+              c.moveTo((i * 97) % w, (i * 43) % h);
+              c.lineTo((i * 97 + 90) % w, (i * 43 + 8) % h);
+              c.stroke();
+            }
+            for (const p of this.splats) {
+              c.save();
+              c.globalAlpha = clamp(p.life, 0.15, 0.95);
+              for (let k = 0; k < 10; k++) {
+                let a = (k * TAU) / 10 + Math.sin(k + p.x) * 0.45,
+                  rr = p.r * (0.45 + Math.sin(k * 2 + p.y) * 0.23);
+                c.fillStyle = p.c;
+                c.beginPath();
+                c.ellipse(
+                  p.x + Math.cos(a) * rr * 0.24,
+                  p.y + Math.sin(a) * rr * 0.18,
+                  rr * 0.55,
+                  rr * 0.3,
+                  a,
+                  0,
+                  TAU,
+                );
+                c.fill();
+              }
+              c.fillStyle = "#ffffff55";
+              c.beginPath();
+              c.ellipse(
+                p.x - p.r * 0.18,
+                p.y - p.r * 0.2,
+                p.r * 0.18,
+                p.r * 0.055,
+                -0.4,
+                0,
+                TAU,
+              );
+              c.fill();
+              c.fillStyle = p.c;
+              c.fillRect(
+                p.x - 3,
+                p.y + p.r * 0.35,
+                6,
+                Math.min(75, p.drip * 30),
+              );
+              for (let d = 0; d < 8; d++) {
+                c.globalAlpha = 0.6 * p.life;
+                c.beginPath();
+                c.arc(
+                  p.x + Math.cos(d * 2.1) * p.r * rnd(0.45, 1.1),
+                  p.y + Math.sin(d * 1.6) * p.r * rnd(0.35, 1),
+                  rnd(3, 9),
+                  0,
+                  TAU,
+                );
+                c.fill();
+              }
+              c.restore();
+            }
+            for (const s of this.streak) {
+              c.strokeStyle = `rgba(235,255,255,${s.life * 2.5})`;
+              c.lineWidth = 44;
+              c.lineCap = "round";
+              c.beginPath();
+              c.moveTo(s.px, s.py);
+              c.lineTo(s.x, s.y);
+              c.stroke();
+            }
+            c.restore();
+          }
+        }
+        class Enemy {
+          constructor(g, type, x, y) {
+            this.g = g;
+            this.type = type;
+            this.x = x;
+            this.y = y;
+            this.hp = type.startsWith("Boss")
+              ? 14
+              : type === "Shield Player"
+                ? 2
+                : 1;
+            this.t = rnd(0, 2);
+            this.state = "hide";
+            this.warn = 0;
+            this.tagged = false;
+            this.fake = type === "Trickster" && Math.random() < 0.45;
+            this.paint = [];
+          }
+          update(dt) {
+            if (this.tagged) return;
+            this.t += dt * this.g.diff.enemy;
+            let cyc =
+              this.type === "Sprinter"
+                ? 2.1
+                : this.type === "Sniper"
+                  ? 4.4
+                  : this.type === "Rusher"
+                    ? 2.8
+                    : 3.2;
+            if (this.type === "Rusher" && this.g.cover) this.y += dt * 18;
+            if (this.t % cyc < cyc * 0.46) {
+              this.state = "expose";
+              this.warn += dt;
+            } else {
+              this.state = "hide";
+              this.warn = 0;
+            }
+            if (this.warn > this.g.diff.warn) {
+              this.fire();
+              this.warn = 0;
+              this.t = 0;
+            }
+          }
+          fire() {
+            if (this.g.cover || this.g.protect > 0 || this.g.shield > 0) return;
+            let type =
+              this.type === "Sniper"
+                ? "Sniper Streak"
+                : this.type === "Paint Bomber"
+                  ? "Paint Grenade"
+                  : this.type.startsWith("Boss")
+                    ? "Heavy Boss Paint"
+                    : this.type === "Rusher"
+                      ? "Sticky Paint"
+                      : Math.random() < 0.25
+                        ? "Small Splash"
+                        : "Direct Splash";
+            this.g.enemyShots.push({
+              x: this.x,
+              y: this.y,
+              vx: (this.g.w / 2 - this.x) * 0.9,
+              vy: (this.g.h * 0.55 - this.y) * 0.9,
+              t: 0,
+              type,
+            });
+            this.g.audio.sfx("warn");
+          }
+          hit() {
+            if (this.fake) {
+              this.g.breakCombo();
+              return;
+            }
+            this.hp--;
+            this.paint.push("#ff3faf");
+            if (this.hp <= 0) {
+              this.tagged = true;
+              this.g.tag(this);
+            }
+          }
+          draw(c) {
+            let exp = this.state === "expose" || this.tagged,
+              sc = clamp(this.y / 520, 0.55, 1.25),
+              bob = Math.sin(this.t * 5) * 4,
+              x = this.x,
+              y = this.y + (exp ? bob : 34),
+              col =
+                {
+                  Rookie: "#42e6ff",
+                  Sprinter: "#a8ff35",
+                  Sniper: "#d28cff",
+                  "Paint Bomber": "#ffd54a",
+                  "Shield Player": "#ff914d",
+                  Medic: "#5dffb0",
+                  Trickster: "#ff58c8",
+                  Rusher: "#ff5757",
+                }[this.type] || "#fff";
+            c.save();
+            if (!exp) c.globalAlpha = 0.55;
+            c.translate(x, y);
+            c.scale(sc, sc);
+            c.fillStyle = "#0004";
+            c.beginPath();
+            c.ellipse(0, 48, 36, 9, 0, 0, TAU);
+            c.fill();
+            if (this.type === "Shield Player") {
+              c.fillStyle = "#b8f6ff66";
+              c.strokeStyle = "#eaffff";
+              c.lineWidth = 3;
+              c.beginPath();
+              c.roundRect(-42, -28, 38, 74, 12);
+              c.fill();
+              c.stroke();
+            }
+            c.fillStyle = this.fake ? "#9ab" : col;
+            c.beginPath();
+            c.roundRect(-22, -5, 44, 49, 12);
+            c.fill();
+            c.fillStyle = "#17243d";
+            c.beginPath();
+            c.arc(0, -24, 24, 0, TAU);
+            c.fill();
+            c.fillStyle = "#8ff";
+            c.fillRect(-16, -29, 32, 11);
+            c.fillStyle = "#273";
+            c.fillRect(16, 5, 38, 8);
+            if (this.type === "Medic") {
+              c.fillStyle = "#fff";
+              c.fillRect(-5, 8, 10, 25);
+              c.fillRect(-14, 16, 28, 9);
+            }
+            if (this.type === "Paint Bomber") {
+              c.fillStyle = "#f5e";
+              c.beginPath();
+              c.arc(35, -8, 9, 0, TAU);
+              c.fill();
+            }
+            if (this.warn > 0) {
+              c.strokeStyle = this.type === "Sniper" ? "#f6f" : "#ffef5c";
+              c.lineWidth = 4;
+              c.beginPath();
+              c.arc(
+                0,
+                -24,
+                32,
+                -Math.PI / 2,
+                -Math.PI / 2 + TAU * (this.warn / this.g.diff.warn),
+              );
+              c.stroke();
+            }
+            for (let i = 0; i < this.paint.length; i++) {
+              c.fillStyle = this.paint[i];
+              c.beginPath();
+              c.arc(-10 + i * 12, 8 + i * 3, 7, 0, TAU);
+              c.fill();
+            }
+            if (this.tagged) {
+              c.fillStyle = "#fff";
+              c.font = "900 18px sans-serif";
+              c.fillText("TAG!", -22, -52);
+            }
+            c.restore();
+          }
+        }
+        class Game {
+          constructor() {
+            this.cv = $("game");
+            this.c = this.cv.getContext("2d");
+            this.save = new Save();
+            this.audio = new Audio(this.save);
+            this.visorSys = new Visor(this);
+            this.mode = "boot";
+            this.pointer = {
+              x: innerWidth / 2,
+              y: innerHeight / 2,
+              down: false,
+            };
+            this.cover = true;
+            this.coverPos = 1;
+            this.cleanPower = 1;
+            this.bind();
+            this.resize();
+            this.menu();
+            requestAnimationFrame((t) => this.loop(t));
+          }
+          bind() {
+            addEventListener("resize", () => this.resize());
+            addEventListener("blur", () => this.pauseGame());
+            document.addEventListener("visibilitychange", () => {
+              if (document.hidden) this.pauseGame();
+            });
+            document.addEventListener("contextmenu", (e) => e.preventDefault());
+            this.cv.addEventListener("pointerdown", (e) => {
+              this.audio.init();
+              this.cv.setPointerCapture(e.pointerId);
+              this.pointer.down = true;
+              this.move(e);
+              if (this.mode === "play" && this.cover)
+                this.lastClean = { x: e.clientX, y: e.clientY };
+              else if (this.save.d.settings.simple) this.fire();
+            });
+            this.cv.addEventListener("pointermove", (e) => {
+              this.move(e);
+              if (
+                this.mode === "play" &&
+                this.pointer.down &&
+                this.cover &&
+                this.lastClean
+              ) {
+                this.visorSys.clean(
+                  e.clientX,
+                  e.clientY,
+                  this.lastClean.x,
+                  this.lastClean.y,
+                );
+                this.lastClean = { x: e.clientX, y: e.clientY };
+              }
+            });
+            this.cv.addEventListener("pointerup", () => {
+              this.pointer.down = false;
+              this.lastClean = null;
+            });
+            addEventListener("keydown", (e) => {
+              if (this.mode !== "play") return;
+              if (e.key === " ") this.cover = true;
+              if (e.key === "r" || e.key === "R") this.reload();
+              if (e.key === "e" || e.key === "E") this.ability();
+              if (e.key === "a" || e.key === "ArrowLeft") this.switch(-1);
+              if (e.key === "d" || e.key === "ArrowRight") this.switch(1);
+              if (e.key === "Escape" || e.key === "p" || e.key === "P")
+                this.pauseGame();
+            });
+            addEventListener("keyup", (e) => {
+              if (e.key === " ") this.cover = false;
+            });
+            $("fire").onclick = () => this.fire();
+            $("cover").onpointerdown = () => (this.cover = true);
+            $("cover").onpointerup = () => (this.cover = false);
+            $("reload").onclick = () => this.reload();
+            $("ability").onclick = () => this.ability();
+            $("left").onclick = () => this.switch(-1);
+            $("right").onclick = () => this.switch(1);
+            $("pause").onclick = () => this.pauseGame();
+          }
+          resize() {
+            let d = Math.min(devicePixelRatio || 1, 2);
+            this.w = innerWidth;
+            this.h = innerHeight;
+            this.cv.width = this.w * d;
+            this.cv.height = this.h * d;
+            this.c.setTransform(d, 0, 0, d, 0, 0);
+          }
+          move(e) {
+            this.pointer.x = e.clientX;
+            this.pointer.y = e.clientY;
+          }
+          screen(s) {
+            $("screen").classList.remove("hidden");
+            $("screen").innerHTML = s;
+            $("hud").classList.add("hidden");
+          }
+          toast(t) {
+            let e = $("toast");
+            e.textContent = t;
+            e.classList.add("show");
+            setTimeout(() => e.classList.remove("show"), 1700);
+          }
+          menu() {
+            this.mode = "menu";
+            this.audio.menu();
+            this.screen(
+              `<div class=title>PAINTBALL<br>PANIC</div><p>Single-player arcade paintball with a physical painted visor.</p><div class=row>${["Play", "Campaign", "Quick Match", "Target Rush", "Survival", "Daily Operation", "Equipment", "How to Play", "Achievements", "High Scores", "Settings"].map((x) => `<button class="btn ${x === "Play" ? "pink" : ""}" data-m="${x}">${x}</button>`).join("")}</div>`,
+            );
+            document
+              .querySelectorAll("[data-m]")
+              .forEach((b) => (b.onclick = () => this.route(b.dataset.m)));
+          }
+          route(m) {
+            this.audio.init();
+            if (m === "Play" || m === "Campaign") return this.missions();
+            if (
+              [
+                "Quick Match",
+                "Target Rush",
+                "Survival",
+                "Daily Operation",
+              ].includes(m)
+            )
+              return this.modeSetup(m);
+            if (m === "Equipment") return this.equipment();
+            if (m === "How to Play") return this.how();
+            if (m === "Achievements") return this.achievements();
+            if (m === "High Scores") return this.high();
+            if (m === "Settings") return this.settings();
+          }
+          modeSetup(mode) {
+            const todaySeed = Number(
+              new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+            );
+            const daily = new SeededRandom(todaySeed);
+            const defaultArena =
+              mode === "Daily Operation" ? daily.pick([0, 1, 2]) : 0;
+            const defaultDiff =
+              mode === "Daily Operation"
+                ? daily.pick(["Rookie", "Pro", "Elite"])
+                : "Pro";
+            const modeDescriptions = {
+              "Quick Match":
+                "Randomized 90-second arcade match with mixed opponents.",
+              "Target Rush":
+                "60-second score attack with faster bonus targets and accuracy scoring.",
+              Survival:
+                "Endless waves with upgrade-card choices between rounds.",
+              "Daily Operation":
+                "Deterministic local challenge generated from today's date.",
+            };
+            const options = (items, selected) =>
+              items
+                .map((item) => {
+                  const value = Array.isArray(item) ? item[0] : item;
+                  return `<option ${value === selected ? "selected" : ""}>${value}</option>`;
+                })
+                .join("");
+            this.screen(
+              `<div class=panel><h1>${mode}</h1><p>${modeDescriptions[mode]}</p><div class=grid><label class=card>Arena<select id=arena>${DATA.arenas.map((a, i) => `<option value=${i} ${i === defaultArena ? "selected" : ""}>${a}</option>`).join("")}</select></label><label class=card>Difficulty<select id=df>${Object.keys(
+                DATA.diff,
+              )
+                .map(
+                  (d) =>
+                    `<option ${d === defaultDiff ? "selected" : ""}>${d}</option>`,
+                )
+                .join(
+                  "",
+                )}</select></label><label class=card>Marker<select id=mk>${options(DATA.markers, "Scout")}</select></label><label class=card>Visor Tool<select id=tl>${options(DATA.tools, "Microfiber Glove")}</select></label><label class=card>Special<select id=ab>${options(DATA.abilities, "Focus Time")}</select></label><label class=card>Passive 1<select id=p1><option>None</option>${DATA.passives.map((p) => `<option>${p}</option>`).join("")}</select></label><label class=card>Passive 2<select id=p2><option>None</option>${DATA.passives.map((p) => `<option>${p}</option>`).join("")}</select></label></div><p class=small>Locked items are represented in the collection screens; stars and achievements unlock the full roster locally.</p><button class="btn pink" id=start>Start ${mode}</button> <button class=btn id=back>Back</button></div>`,
+            );
+            $("start").onclick = () => {
+              const arena = Number($("arena").value);
+              const mission = {
+                ...DATA.missions[arena * 5],
+                arena,
+                name: mode,
+                type: mode,
+                time:
+                  mode === "Target Rush"
+                    ? 60
+                    : mode === "Quick Match"
+                      ? 90
+                      : 100,
+              };
+              this.start({
+                mode,
+                mission,
+                difficulty: $("df").value,
+                marker: $("mk").value,
+                tool: $("tl").value,
+                ability: $("ab").value,
+                passives: [$("p1").value, $("p2").value].filter(
+                  (x) => x !== "None",
+                ),
+              });
+            };
+            $("back").onclick = () => this.menu();
+          }
+          missions() {
+            this.screen(
+              `<div class=panel><h1>Campaign</h1><div class=grid>${DATA.missions.map((m) => `<div class=card><h3>${m.id}. ${m.name}</h3><p>${DATA.arenas[m.arena]} • ${m.type}</p><p>${m.brief}</p><button class="btn gold" data-id=${m.id}>Start</button></div>`).join("")}</div><p><button class=btn id=back>Back</button></p></div>`,
+            );
+            $("back").onclick = () => this.menu();
+            document
+              .querySelectorAll("[data-id]")
+              .forEach(
+                (b) =>
+                  (b.onclick = () =>
+                    this.loadout(DATA.missions[b.dataset.id - 1])),
+              );
+          }
+          loadout(m) {
+            let opt = (a) =>
+              a
+                .map((x) => `<option>${Array.isArray(x) ? x[0] : x}</option>`)
+                .join("");
+            this.screen(
+              `<div class=panel><h1>Loadout: ${m.name}</h1><div class=grid><label>Difficulty<select id=df>${Object.keys(DATA.diff).map((d) => `<option ${d === "Pro" ? "selected" : ""}>${d}</option>`)}</select></label><label>Marker<select id=mk>${opt(DATA.markers)}</select></label><label>Visor Tool<select id=tl>${opt(DATA.tools)}</select></label><label>Ability<select id=ab>${opt(DATA.abilities)}</select></label></div><p>${m.goal}. Up to three stars for completion, score, and accuracy.</p><button class="btn pink" id=start>Enter Arena</button> <button class=btn id=back>Back</button></div>`,
+            );
+            $("start").onclick = () =>
+              this.start({
+                mode: "Campaign",
+                mission: m,
+                difficulty: $("df").value,
+                marker: $("mk").value,
+                tool: $("tl").value,
+                ability: $("ab").value,
+              });
+            $("back").onclick = () => this.missions();
+          }
+          start(o) {
+            $("screen").classList.add("hidden");
+            $("hud").classList.remove("hidden");
+            this.mode = "play";
+            this.opt = o;
+            this.audio.stop();
+            this.diff = DATA.diff[o.difficulty] || DATA.diff.Pro;
+            this.marker =
+              DATA.markers.find((m) => m[0] === o.marker) || DATA.markers[0];
+            this.cleanPower = o.tool === "Microfiber Glove" ? 1.45 : 1;
+            this.time = (o.mission?.time || 90) * this.diff.time;
+            this.score = 0;
+            this.combo = 0;
+            this.mult = 1;
+            this.shots = 0;
+            this.hits = 0;
+            this.reloadT = 0;
+            this.maxAmmo = this.marker[2] + this.diff.ammo;
+            this.ammo = this.maxAmmo;
+            this.charge = 0;
+            this.protect = 2;
+            this.shield = 0;
+            this.stats = { wipes: 0, highVisor: 0, trick: 0 };
+            this.projectiles = [];
+            this.enemyShots = [];
+            this.arenaPaint = [];
+            this.visorSys.splats = [];
+            this.spawn();
+          }
+          spawn() {
+            this.enemies = [];
+            let n = this.opt.mission?.boss
+              ? 1
+              : 6 + Math.floor((this.opt.mission?.id || 1) / 3);
+            for (let i = 0; i < n; i++) {
+              let type = this.opt.mission?.boss
+                ? "Boss " + this.opt.mission.name
+                : DATA.enemies[
+                    (i + (this.opt.mission?.id || 0)) % DATA.enemies.length
+                  ];
+              this.enemies.push(
+                new Enemy(
+                  this,
+                  type,
+                  rnd(110, this.w - 110),
+                  rnd(150, this.h * 0.58),
+                ),
+              );
+            }
+          }
+          fire() {
+            if (
+              this.mode !== "play" ||
+              this.cover ||
+              this.reloadT > 0 ||
+              this.ammo <= 0
+            ) {
+              if (this.ammo <= 0) this.reload();
+              return;
+            }
+            this.ammo--;
+            this.shots++;
+            this.audio.sfx("fire");
+            let sp = (1 - this.marker[3]) * 18;
+            this.projectiles.push({
+              x: this.w / 2,
+              y: this.h * 0.78,
+              tx: this.pointer.x + rnd(-sp, sp),
+              ty: this.pointer.y + rnd(-sp, sp),
+              t: 0,
+              r: this.marker[0] === "Splash Cannon" ? 27 : 12,
+            });
+            if (this.ammo <= 0) this.reload();
+          }
+          reload() {
+            if (this.reloadT <= 0 && this.ammo < this.maxAmmo) {
+              this.reloadT = (this.cover ? 1 : 1.8) / (this.marker[5] || 1);
+              this.audio.sfx("reload");
+            }
+          }
+          ability() {
+            if (this.charge < 1) return;
+            this.charge = 0;
+            this.audio.sfx("ok");
+            let a = this.opt.ability;
+            if (a === "Clean Sweep") {
+              this.visorSys.splats = [];
+              this.enemyShots = [];
+            } else if (a === "Bubble Shield") this.shield = 5;
+            else if (a === "Rapid Reload") {
+              this.ammo = this.maxAmmo;
+              this.reloadT = 0;
+            } else if (a === "Paint Wave")
+              this.enemies
+                .filter((e) => !e.tagged && e.state === "expose")
+                .forEach((e) => e.hit());
+            else this.protect = 4;
+          }
+          switch(d) {
+            this.coverPos = clamp(this.coverPos + d, 0, 2);
+            this.protect = 1.2;
+            this.audio.sfx("ok");
+          }
+          pauseGame() {
+            if (this.mode !== "play") return;
+            this.mode = "paused";
+            this.screen(
+              `<div class=panel><h1>Paused</h1><div class=row><button class="btn pink" id=res>Resume</button><button class=btn id=restart>Restart Mission</button><button class=btn id=how>How to Play</button><button class=btn id=menu>Return to Main Menu</button></div><p>Music <input id=mv type=range min=0 max=1 step=.01 value=${this.save.d.settings.music}> SFX <input id=sv type=range min=0 max=1 step=.01 value=${this.save.d.settings.sfx}></p></div>`,
+            );
+            $("res").onclick = () => {
+              this.mode = "play";
+              this.protect = 2;
+              $("screen").classList.add("hidden");
+              $("hud").classList.remove("hidden");
+            };
+            $("restart").onclick = () => this.start(this.opt);
+            $("how").onclick = () => this.how(true);
+            $("menu").onclick = () => {
+              if (confirm("Leave the arena and lose current mission progress?"))
+                this.menu();
+            };
+            $("mv").oninput = (e) => {
+              this.save.d.settings.music = +e.target.value;
+              this.save.save();
+            };
+            $("sv").oninput = (e) => {
+              this.save.d.settings.sfx = +e.target.value;
+              this.save.save();
+            };
+          }
+          tag(e) {
+            this.hits++;
+            this.combo++;
+            this.mult = 1 + Math.floor(this.combo / 4) * 0.5;
+            this.score += Math.floor(100 * this.mult * this.diff.score);
+            this.charge = clamp(this.charge + 0.14, 0, 1);
+            this.audio.sfx("hit");
+            this.unlock(
+              this.hits === 1
+                ? "First Tag"
+                : this.combo >= 12
+                  ? "Splatter Master"
+                  : this.combo >= 8
+                    ? "Color Storm"
+                    : this.combo >= 4
+                      ? "Hot Streak"
+                      : "Clean Shot",
+            );
+          }
+          breakCombo() {
+            this.combo = 0;
+            this.mult = 1;
+            this.toast("Decoy! Combo broken");
+          }
+          unlock(a) {
+            if (!a || this.save.d.ach[a]) return;
+            this.save.d.ach[a] = 1;
+            this.save.save();
+            this.toast("Achievement: " + a);
+          }
+          end(win) {
+            this.mode = "results";
+            let acc = this.shots
+                ? Math.round((this.hits / this.shots) * 100)
+                : 100,
+              stars = win
+                ? 1 + (this.score > 800 ? 1 : 0) + (acc > 70 ? 1 : 0)
+                : 0;
+            if (this.opt.mode === "Campaign") {
+              this.save.d.stars[this.opt.mission.id] = Math.max(
+                this.save.d.stars[this.opt.mission.id] || 0,
+                stars,
+              );
+              if (this.opt.mission.id === 15 && win) this.save.d.panic = true;
+            }
+            let key = this.opt.mode + " " + (this.opt.difficulty || "Pro");
+            this.save.d.high[key] = Math.max(
+              this.save.d.high[key] || 0,
+              this.score,
+            );
+            this.save.save();
+            this.screen(
+              `<div class=panel><h1>${win ? "Mission Complete!" : "Tagged Out!"}</h1><h2>${"★".repeat(stars)}${"☆".repeat(3 - stars)}</h2><div class=grid>${[
+                ["Final score", this.score],
+                ["Accuracy", acc + "%"],
+                ["Opponents tagged", this.hits],
+                ["Shots fired", this.shots],
+                ["Longest combo", this.combo],
+                ["Highest multiplier", "x" + this.mult],
+                ["Highest visor", Math.round(this.stats.highVisor) + "%"],
+                ["Wipes", this.stats.wipes],
+              ]
+                .map((x) => `<div class=card>${x[0]}<br><b>${x[1]}</b></div>`)
+                .join(
+                  "",
+                )}</div><p class=row><button class="btn pink" id=retry>Retry</button><button class=btn id=next>Next Mission</button><button class=btn id=equip>Equipment</button><button class=btn id=menu>Main Menu</button></p></div>`,
+            );
+            $("retry").onclick = () => this.start(this.opt);
+            $("next").onclick = () =>
+              this.loadout(DATA.missions[(this.opt.mission?.id || 1) % 15]);
+            $("equip").onclick = () => this.equipment();
+            $("menu").onclick = () => this.menu();
+          }
+          equipment() {
+            this.screen(
+              `<div class=panel><h1>Equipment</h1><h2>Markers</h2><div class=grid>${DATA.markers.map((m) => `<div class=card><h3>${m[0]}</h3><p>${m[1]}</p><p>Hopper ${m[2]} • Accuracy ${Math.round(m[3] * 100)} • Velocity ${m[4]}</p></div>`).join("")}</div><h2>Visor Tools</h2><p>${DATA.tools.join(" • ")}</p><h2>Special Abilities</h2><p>${DATA.abilities.join(" • ")}</p><h2>Survival Upgrades</h2><p>${DATA.survival.join(" • ")}</p><button class=btn id=back>Back</button></div>`,
+            );
+            $("back").onclick = () => this.menu();
+          }
+          how(paused = false) {
+            this.screen(
+              `<div class=panel><h1>How to Play</h1><div class=grid>${["Mobile controls", "Desktop controls", "Aiming and shooting", "Cover switching", "Reloading", "Visor paint", "Manual visor cleaning", "Opponent guide", "Mission objectives", "Equipment", "Difficulties", "Scoring and combos"].map((x) => `<div class=card><b>${x}</b><p>Use responsive controls, watch attack warnings, and balance firing with safe cover time.</p></div>`).join("")}</div><p>Drag/touch or use mouse to aim. FIRE tags opponents. Hold COVER or Space to duck. R reloads. A/D switches cover. E activates the special. While behind cover, drag across visor paint to smear and wipe it away.</p><button class="btn pink" id=tut>Replay Tutorial</button> <button class=btn id=back>Back</button></div>`,
+            );
+            $("tut").onclick = () => {
+              this.start({
+                mode: "Tutorial",
+                mission: DATA.missions[0],
+                difficulty: "Rookie",
+                marker: "Scout",
+                tool: "Microfiber Glove",
+                ability: "Clean Sweep",
+              });
+              this.toast(
+                "Tutorial: aim, fire, reload, cover, clean, switch, use ability.",
+              );
+            };
+            $("back").onclick = () => (paused ? this.pauseGame() : this.menu());
+          }
+          achievements() {
+            this.screen(
+              `<div class=panel><h1>Achievements</h1><div class=grid>${DATA.ach.map((a) => `<div class=card>${this.save.d.ach[a] ? "✓" : "□"} <b>${a}</b><p>${this.save.d.ach[a] ? "Unlocked" : "Locked"}</p></div>`).join("")}</div><button class=btn id=back>Back</button></div>`,
+            );
+            $("back").onclick = () => this.menu();
+          }
+          high() {
+            this.screen(
+              `<div class=panel><h1>High Scores</h1>${
+                Object.entries(this.save.d.high)
+                  .map(([k, v]) => `<p>${k}: <b>${v}</b></p>`)
+                  .join("") || "<p>No scores yet.</p>"
+              }<button class=btn id=back>Back</button></div>`,
+            );
+            $("back").onclick = () => this.menu();
+          }
+          settings() {
+            let s = this.save.d.settings;
+            this.screen(
+              `<div class=panel><h1>Settings</h1><div class=grid>${["assist", "simple", "shake", "reduced", "large", "contrast", "colorblind", "traj", "haptic"].map((k) => `<label class=card><input type=checkbox id=${k} ${s[k] ? "checked" : ""}> ${k}</label>`).join("")}<label class=card>Graphics <select id=graphics><option>High</option><option>Balanced</option><option>Battery Saver</option></select></label></div><p>Music <input id=mv type=range min=0 max=1 step=.01 value=${s.music}> SFX <input id=sv type=range min=0 max=1 step=.01 value=${s.sfx}></p><button class="btn gold" id=full>Fullscreen</button> <button class=btn id=reset>Reset Progress</button> <button class=btn id=back>Back</button></div>`,
+            );
+            $("graphics").value = s.graphics;
+            [
+              "assist",
+              "simple",
+              "shake",
+              "reduced",
+              "large",
+              "contrast",
+              "colorblind",
+              "traj",
+              "haptic",
+            ].forEach(
+              (k) =>
+                ($(k).onchange = (e) => {
+                  s[k] = e.target.checked;
+                  this.save.save();
+                }),
+            );
+            $("graphics").onchange = (e) => {
+              s.graphics = e.target.value;
+              this.save.save();
+            };
+            $("mv").oninput = (e) => {
+              s.music = +e.target.value;
+              this.save.save();
+            };
+            $("sv").oninput = (e) => {
+              s.sfx = +e.target.value;
+              this.save.save();
+            };
+            $("full").onclick = () =>
+              document.documentElement.requestFullscreen?.();
+            $("reset").onclick = () =>
+              confirm("Reset all Paintball Panic progress?") &&
+              this.save.reset();
+            $("back").onclick = () => this.menu();
+          }
+          update(dt) {
+            if (this.mode !== "play") return;
+            this.time -= dt;
+            this.protect = Math.max(0, this.protect - dt);
+            this.shield = Math.max(0, this.shield - dt);
+            if (this.reloadT > 0) {
+              this.reloadT -= dt;
+              if (this.reloadT <= 0) this.ammo = this.maxAmmo;
+            }
+            this.visorSys.update(dt);
+            let cov = this.visorSys.coverage();
+            this.stats.highVisor = Math.max(this.stats.highVisor, cov);
+            if (cov >= 99) return this.end(false);
+            if (this.time <= 0)
+              return this.end(this.opt.mode === "Survival" || this.hits > 0);
+            for (const e of this.enemies) e.update(dt);
+            for (const p of this.projectiles) {
+              p.t += dt;
+              p.x += (p.tx - p.x) * dt * 8;
+              p.y += (p.ty - p.y) * dt * 8;
+              for (const e of this.enemies) {
+                if (
+                  !e.tagged &&
+                  e.state === "expose" &&
+                  Math.hypot(p.x - e.x, p.y - e.y) < p.r + 32 + this.diff.assist
+                ) {
+                  e.hit();
+                  p.dead = 1;
+                  this.arenaPaint.push({
+                    x: p.x,
+                    y: p.y,
+                    r: p.r * 1.4,
+                    c: "#ff3faf",
+                  });
+                  break;
+                }
+              }
+              if (p.t > 1) p.dead = 1;
+            }
+            this.projectiles = this.projectiles.filter((p) => !p.dead);
+            for (const s of this.enemyShots) {
+              s.t += dt;
+              s.x += s.vx * dt;
+              s.y += s.vy * dt;
+              if (s.t > 1) {
+                this.visorSys.add(
+                  clamp(s.x, 60, this.w - 60),
+                  clamp(s.y, 80, this.h - 80),
+                  s.type,
+                );
+                s.dead = 1;
+                this.combo = 0;
+              }
+            }
+            this.enemyShots = this.enemyShots.filter((s) => !s.dead);
+            if (this.enemies.every((e) => e.tagged))
+              this.opt.mode === "Survival" ? this.spawn() : this.end(true);
+            if (
+              this.cover &&
+              this.save.d.settings.simple &&
+              this.visorSys.splats[0]
+            )
+              this.visorSys.splats[0].life -= dt * 0.08;
+            this.hud();
+          }
+          hud() {
+            $("score").textContent = "Score " + this.score;
+            $("obj").textContent =
+              (this.opt.mission?.name || this.opt.mode) +
+              " " +
+              Math.ceil(this.time) +
+              "s";
+            $("ammo").textContent =
+              (this.reloadT > 0 ? "Reload " : "") +
+              this.ammo +
+              "/" +
+              this.maxAmmo;
+            $("visor").textContent =
+              "Visor " + Math.round(this.visorSys.coverage()) + "%";
+            $("combo").textContent =
+              [
+                "Clean Shot",
+                "Hot Streak",
+                "Color Storm",
+                "Splatter Master",
+                "Paintball Panic!",
+              ][clamp(Math.floor(this.combo / 4), 0, 4)] +
+              " x" +
+              this.mult;
+            $("ability").style.setProperty("--q", this.charge * 100 + "%");
+          }
+          arena(c) {
+            let w = this.w,
+              h = this.h,
+              a = this.opt?.mission?.arena || 0;
+            c.fillStyle = ["#79d66b", "#142546", "#238cc7"][a];
+            c.fillRect(0, 0, w, h);
+            c.fillStyle = a === 1 ? "#263d6e" : a === 2 ? "#9b6b35" : "#7bd0ff";
+            c.fillRect(0, 0, w, h * 0.35);
+            for (let i = 0; i < 12; i++) {
+              c.fillStyle =
+                a === 1 ? "#3affdd33" : a === 2 ? "#ffdc5444" : "#ffffff70";
+              c.beginPath();
+              c.arc(
+                (i * 157 + Date.now() / 80) % w,
+                60 + (i % 4) * 35,
+                30,
+                0,
+                TAU,
+              );
+              c.fill();
+            }
+            for (let i = 0; i < 8; i++) {
+              let x = ((i + 0.5) * w) / 8;
+              c.fillStyle = ["#ff5ca8", "#39d7ff", "#ffdb4a"][i % 3];
+              c.beginPath();
+              c.roundRect(x - 45, h * 0.55 + (i % 2) * 35, 90, 55, 22);
+              c.fill();
+              c.strokeStyle = "#fff5";
+              c.stroke();
+            }
+            for (const p of this.arenaPaint.slice(-80)) {
+              c.fillStyle = p.c;
+              c.beginPath();
+              c.arc(p.x, p.y, p.r, 0, TAU);
+              c.fill();
+            }
+            let cx = [w * 0.16, w * 0.5, w * 0.84][this.coverPos];
+            c.fillStyle = "#05121eda";
+            c.beginPath();
+            c.roundRect(cx - w * 0.2, h * 0.78, w * 0.4, h * 0.25, 28);
+            c.fill();
+            c.fillStyle = "#ffffff22";
+            c.fillRect(cx - w * 0.18, h * 0.8, w * 0.36, 8);
+          }
+          draw(t) {
+            let c = this.c;
+            c.clearRect(0, 0, this.w, this.h);
+            this.arena(c);
+            if (this.mode === "menu") {
+              c.fillStyle = "#ff3faf88";
+              c.beginPath();
+              c.arc(
+                this.w * 0.55,
+                this.h * 0.35,
+                80 + Math.sin(t / 300) * 18,
+                0,
+                TAU,
+              );
+              c.fill();
+              this.visorSys.draw(c);
+              return;
+            }
+            if (["play", "paused", "results"].includes(this.mode)) {
+              for (const e of this.enemies || []) e.draw(c);
+              for (const p of this.projectiles || []) {
+                c.strokeStyle = "#fff8";
+                c.lineWidth = 4;
+                c.beginPath();
+                c.moveTo(p.x, p.y);
+                c.lineTo(p.x - (p.tx - p.x) * 0.12, p.y - (p.ty - p.y) * 0.12);
+                c.stroke();
+                c.fillStyle = "#ff3faf";
+                c.beginPath();
+                c.arc(p.x, p.y, 7, 0, TAU);
+                c.fill();
+              }
+              for (const s of this.enemyShots || []) {
+                c.fillStyle = "#ffd54a";
+                c.beginPath();
+                c.arc(s.x, s.y, 8, 0, TAU);
+                c.fill();
+              }
+              this.visorSys.draw(c);
+              let x = this.pointer.x,
+                y = this.pointer.y;
+              c.strokeStyle = this.cover ? "#7ff" : "#fff";
+              c.lineWidth = 3;
+              c.beginPath();
+              c.arc(x, y, 18 + Math.sin(t / 90) * 2, 0, TAU);
+              c.moveTo(x - 28, y);
+              c.lineTo(x - 8, y);
+              c.moveTo(x + 8, y);
+              c.lineTo(x + 28, y);
+              c.moveTo(x, y - 28);
+              c.lineTo(x, y - 8);
+              c.moveTo(x, y + 8);
+              c.lineTo(x, y + 28);
+              c.stroke();
+              if (this.cover) {
+                c.fillStyle = "#00182755";
+                c.fillRect(0, 0, this.w, this.h);
+                c.fillStyle = "#dff";
+                c.font = "900 22px sans-serif";
+                c.textAlign = "center";
+                c.fillText(
+                  "BEHIND COVER - swipe visor paint to clean",
+                  this.w / 2,
+                  this.h * 0.72,
+                );
+              }
+            }
+          }
+          loop(t) {
+            let dt = Math.min(0.033, (t - this.last || 16) / 1000);
+            this.last = t;
+            this.update(dt);
+            this.draw(t);
+            requestAnimationFrame((x) => this.loop(x));
+          }
+        }
+        if (!CanvasRenderingContext2D.prototype.roundRect)
+          CanvasRenderingContext2D.prototype.roundRect = function (
+            x,
+            y,
+            w,
+            h,
+            r,
+          ) {
+            this.moveTo(x + r, y);
+            this.arcTo(x + w, y, x + w, y + h, r);
+            this.arcTo(x + w, y + h, x, y + h, r);
+            this.arcTo(x, y + h, x, y, r);
+            this.arcTo(x, y, x + w, y, r);
+            return this;
+          };
+        new Game();
+      })();
+    </script>
+  </body>
+</html>
